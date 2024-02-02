@@ -23,7 +23,7 @@ int eshell_cmd_list_num = sizeof(cmd_list)/sizeof(eshell_cmd_list);
 
 
 
-
+/* 命令程序跳转区 */
 
 
 void cmd_test(int argc, char**argv)

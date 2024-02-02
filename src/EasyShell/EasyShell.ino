@@ -4,10 +4,10 @@
 #include <string.h>
 
 
-#define CMD_BUF_MAX_LEN 128 //最大命令缓冲区长度
-#define CMD_PARAM_MAX_NUM 32 //最大命令参数数量
-#define SERIAL Serial //选择用于EasyShell的串口
-#define EASYSHELL_VER "0.1.3" //选择用于EasyShell的串口
+#define CMD_BUF_MAX_LEN 128 //  最大命令缓冲区长度
+#define CMD_PARAM_MAX_NUM 32 // 最大命令参数数量
+#define SERIAL Serial //  选择用于EasyShell的串口
+#define EASYSHELL_VER "0.1.3" //  版本号
 
 char eshll_cmd_buf[CMD_BUF_MAX_LEN+1] = {0};
 extern int eshell_state;
