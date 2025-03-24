@@ -1,5 +1,15 @@
 #include "EasyShell.h"
 
+char eshell_rcv_buffer[ESHELL_CMD_PARAM_MAX_NUM + 1] = {};  //  命令接收缓冲区
+// char eshell_cmd_historical_record[ESHELL_HISTORICAL_RECORD_MAX][ESHELL_CMD_PARAM_MAX_NUM + 1] = {}; // 历史命令记录缓冲区
+// uint32_t eshell_cmd_historical_record_length[ESHELL_HISTORICAL_RECORD_MAX] = {}; // 历史命令长度记录缓冲区
+// uint32_t eshell_cmd_historical_record_count = 0; // 历史命令记录计数器
+// uint32_t eshell_cmd_historical_record_count_cumulant = 0; // 历史命令记录累计计数器
+// uint32_t eshell_cmd_historical_record_count_offset = 0; // 历史命令选择指针偏移量
+uint32_t cmd_count = 0; // 命令长度计数器
+uint32_t cmd_cursor_count = 0; // 光标位置计数器
+
+
 
 /* 光标处删除字符函数
  * 此函数将自动完成于光标位置删除光标前一位字符并自动前移后方字符
@@ -42,17 +52,15 @@ bool read_next_char(char &buffer) {
  * @param maxlen 最大命令缓冲区长度
  * @return 状态标志
  */
-uint8_t eshell_get(char *buf, uint8_t maxlen){
+uint8_t eshell_get_cmd(char *buf, uint8_t maxlen){
   char rcv_char_buffer = 0; // 接收字符缓存
-  static uint8_t count = 0; // 命令长度计数器
-  static uint8_t cursor_count = 0; // 光标位置计数器
   if (eshell_serial_available()){
     rcv_char_buffer = eshell_serial_read();
-    if (count >= maxlen) /* 缓冲区溢出 */
+    if (cmd_count >= maxlen) /* 缓冲区溢出 */
     {
       buf[0] = '\0'; // 令接收的字符串无效
-      count = 0; // 清零计数器以便后续使用
-      cursor_count = 0;
+      cmd_count = 0; // 清零计数器以便后续使用
+      cmd_cursor_count = 0;
       return ES_GET_ERROR_BUFFER_REMOVAL;  // 返回溢出错误标志
     }
 
@@ -60,10 +68,10 @@ uint8_t eshell_get(char *buf, uint8_t maxlen){
     if(rcv_char_buffer == 0x1B && read_next_char(rcv_char_buffer)){  // 特殊按键1B类
       if(rcv_char_buffer == 0x5B && read_next_char(rcv_char_buffer)){ // 特殊按键1B 5B类
 
-        if(rcv_char_buffer == 0x41){} // 方向键上
-        else if(rcv_char_buffer == 0x42){}  // 方向键下
-        else if(rcv_char_buffer == 0x43){}  // 方向键右
-        else if(rcv_char_buffer == 0x44){}  // 方向键左
+        if(rcv_char_buffer == 0x41){/*eshell_previous_command();*/} // 方向键上
+        else if(rcv_char_buffer == 0x42){/*eshell_next_command();*/}  // 方向键下
+        else if(rcv_char_buffer == 0x43){eshell_moveCursorRight(buf);}  // 方向键右
+        else if(rcv_char_buffer == 0x44){eshell_moveCursorLeft(buf);}  // 方向键左
         else if(rcv_char_buffer == 0x31 && read_next_char(rcv_char_buffer)){
           if(rcv_char_buffer == 0x7E){} // Home键
           else if(rcv_char_buffer == 0x31 && read_next_char(rcv_char_buffer)){
@@ -130,22 +138,34 @@ uint8_t eshell_get(char *buf, uint8_t maxlen){
       case 0x08:  // Backspace键 (ASCII值)
       case 0x7F:  // Backspace键  DEL(ASCII值)
       {
-        if (cursor_count >= 1)  // 光标前有可删减空间
+        if (cmd_cursor_count >= 1)  // 光标前有可删减空间
         {
-          if((cursor_count >= 3) && (buf[cursor_count-3] == 0xE4 || buf[cursor_count-3] == 0xE5 || buf[cursor_count-3] == 0xE6 || buf[cursor_count-3] == 0xE7)){ // 如果是中文字符
+          if((cmd_cursor_count >= 3) && (buf[cmd_cursor_count-3] == 0xE4 || buf[cmd_cursor_count-3] == 0xE5 || buf[cmd_cursor_count-3] == 0xE6 || buf[cmd_cursor_count-3] == 0xE7)){ // 如果是中文字符
             for(int i=0; i<3; i++){
-              if(delete_char_at_cursor(buf, count, cursor_count)){
-              count--; // 减少一位命令长度
-              cursor_count--; // 光标前移动一位
+              if(delete_char_at_cursor(buf, cmd_count, cmd_cursor_count)){
+              cmd_count--; // 减少一位命令长度
+              cmd_cursor_count--; // 光标前移动一位
               }
             }
             eshell_putchar(rcv_char_buffer); 
             eshell_putchar(rcv_char_buffer); // 在终端屏幕上删除一位中文字符
+            // 将删除位置后的字符前移
+            for(int i=cmd_cursor_count; i<cmd_count; i++){ 
+              eshell_putchar(buf[i]);
+            }
+            eshell_printf(" ");
+            eshell_printf("\033[%dD",cmd_count - cmd_cursor_count);
           }
-          else if(delete_char_at_cursor(buf, count, cursor_count)){
-            count--; // 减少一位命令长度
-            cursor_count--; // 光标前移动一位
+          else if(delete_char_at_cursor(buf, cmd_count, cmd_cursor_count)){
+            cmd_count--; // 减少一位命令长度
+            cmd_cursor_count--; // 光标前移动一位
             eshell_putchar(rcv_char_buffer); // 在终端屏幕上删除一位字符
+            // 将删除位置后的字符前移
+            for(int i=cmd_cursor_count; i<cmd_count; i++){ 
+              eshell_putchar(buf[i]);
+            }
+            eshell_printf(" ");
+            eshell_printf("\033[%dD",cmd_count - cmd_cursor_count + 1);
           }
         }
       }break;
@@ -153,18 +173,68 @@ uint8_t eshell_get(char *buf, uint8_t maxlen){
       case  0x10:  // 换行符 '\n'
       case  0x0D:  // Enter键 '\r'
       {
-        buf[count] = '\0';  // 末尾添加字符串结束符
-        count = 0;  // 清零计数器
-        cursor_count = 0;
+        buf[cmd_count] = '\0';  // 末尾添加字符串结束符
+        cmd_count = 0;  // 清零计数器
+        cmd_cursor_count = 0;
         return ES_GET_COMPLETED;  // 返回有效标志
       }break;
 
-      default:
+      default: // TODO:中文插入存在一些未知BUG
       {
-        buf[cursor_count] = rcv_char_buffer;
-        count++;
-        cursor_count++;
-        eshell_putchar(rcv_char_buffer);
+        // 接收到中文
+        if((rcv_char_buffer == 0xE4 || rcv_char_buffer == 0xE5 || rcv_char_buffer == 0xE6 || rcv_char_buffer == 0xE7) && eshell_serial_available()){
+          // 将光标位置之后的字符向后移动3位
+          for (int i = cmd_count; i > cmd_cursor_count + 2; i--) {
+            buf[i] = buf[i - 3];
+          }
+          for(int i = 0; i<3; i++){
+            buf[cmd_cursor_count] = rcv_char_buffer;
+            eshell_putchar(rcv_char_buffer);
+            cmd_count++;
+            cmd_cursor_count++;
+            if(i<2){rcv_char_buffer = eshell_serial_read();}
+          }
+
+          // eshell_putchar(buf[cmd_cursor_count-3]);
+          // eshell_putchar(buf[cmd_cursor_count-2]);
+          // eshell_putchar(buf[cmd_cursor_count-1]);
+          // char send_buf[4]={};
+          // send_buf[0] = buf[cmd_cursor_count-3];
+          // send_buf[1] = buf[cmd_cursor_count-2];
+          // send_buf[2] = buf[cmd_cursor_count-1];
+          // send_buf[3] = '\0';
+          // eshell_printf("%s",send_buf);
+          
+          
+          // 移动光标至修改的位置
+          if(cmd_cursor_count != cmd_count){
+            // 终端将后方字符移动
+            for(int i=cmd_cursor_count; i<=cmd_count; i++){ 
+              eshell_putchar(buf[i]);
+            }
+            eshell_printf("\033[%dD",cmd_count - cmd_cursor_count - 2);
+          }
+          
+        }
+        else{
+          // 将光标位置之后的字符向后移动一位
+          for (int i = cmd_count; i > cmd_cursor_count; i--) {
+            buf[i] = buf[i - 1];
+          }
+          buf[cmd_cursor_count] = rcv_char_buffer;
+          //eshell_putchar(rcv_char_buffer);
+          // 终端将后方字符移动
+          for(int i=cmd_cursor_count; i<=cmd_count; i++){ 
+            eshell_putchar(buf[i]);
+          }
+          // 移动光标至修改的位置
+          if(cmd_cursor_count != cmd_count){
+            eshell_printf("\033[%dD",cmd_count - cmd_cursor_count);
+          }
+          
+          cmd_count++;
+          cmd_cursor_count++;
+        }
       }
     }
   }
@@ -180,7 +250,7 @@ uint8_t eshell_get(char *buf, uint8_t maxlen){
  * @param max_num 允许的最大参数数量
  * @return 实际参数数量
  */
-uint8_t eshell_get_param(char* msg, char*delim, char* get[], int param_max_num)
+uint8_t eshell_get_param(char* msg, const char* delim, char* get[], int param_max_num)
 {
   int i,ret;
   char *ptr = NULL;
@@ -205,13 +275,16 @@ void eshell_match(int argc, char**argv, uint32_t eshell_cmd_list_num, eshell_cmd
   int i = 0;
   for(int i=0; i<eshell_cmd_list_num; i++)
   {
+    // 命令匹配
     if(strcmp(argv[0], cmd_list[i].name) == 0)
     {
-      cmd_list[i].func(argc, argv);
+      eshell_page_id = ES_PAGE_APP; // 将页面ID设置为应用程序
+      cmd_list[i].func(argc, argv); // 跳转到对应的回调函数
+      eshell_page_id = ES_PAGE_MAIN;  // 退出应用程序恢复为主界面
       return;
     }
   }
-    eshell_printf("EasyShell:\"%s\" 命令未找到！\r\n",argv[0]);
+    eshell_printf("[EasyShell] \"%s\" 命令未找到！\r\n",argv[0]);
 }
 
 
@@ -219,12 +292,21 @@ void eshell_match(int argc, char**argv, uint32_t eshell_cmd_list_num, eshell_cmd
 /* shell处理界面
  */
 void eshell_execute(){
-  if(eshell_get(eshell_rcv_buffer, ESHELL_CMD_BUFFER_MAX_LEN))
+  if(eshell_page_id == ES_PAGE_MAIN && eshell_run_state == ES_RUN_NORMAL)
+  if(eshell_get_cmd(eshell_rcv_buffer, ESHELL_CMD_BUFFER_MAX_LEN))
   {
     eshell_printf("\r\n");
-    /* 获得到指令 */
+    /* 获得到命令 */
     if(strlen(eshell_rcv_buffer)) /* 判断接受到的指令字符串是否为0 */
     {
+      // strncpy(eshell_cmd_historical_record[eshell_cmd_historical_record_count], eshell_rcv_buffer, ESHELL_CMD_PARAM_MAX_NUM); // 拷贝命令至历史记录数组
+      // eshell_cmd_historical_record[eshell_cmd_historical_record_count][ESHELL_CMD_PARAM_MAX_NUM] = '\0'; // 确保字符串以 '\0' 结尾
+      // eshell_cmd_historical_record_length[eshell_cmd_historical_record_count] = cmd_count; // 将命令的长度写入历史记录数组
+      // if(eshell_cmd_historical_record_count < ESHELL_HISTORICAL_RECORD_MAX){ eshell_cmd_historical_record_count++; } // 如果未超过历史记录数量最大限制
+      // else if(eshell_cmd_historical_record_count >= ESHELL_HISTORICAL_RECORD_MAX){ eshell_cmd_historical_record_count = 0;} // 如果达到最大限制则指向数组头部
+      // eshell_cmd_historical_record_count_cumulant++; // 历史命令累计计数器增加
+      // eshell_cmd_historical_record_count_offset = 0; // 清除偏移量
+
       char *argv[ESHELL_CMD_PARAM_MAX_NUM];
       int argc = eshell_get_param(eshell_rcv_buffer, " ", argv, ESHELL_CMD_PARAM_MAX_NUM);
       eshell_match(argc, argv, eshell_dynamic_cmd_count, eshell_dynamic_cmd_list);
@@ -234,3 +316,71 @@ void eshell_execute(){
   }
 }
 
+
+/* 光标右移一单位 */
+void eshell_moveCursorRight(char *buf) {
+
+  if(cmd_cursor_count < cmd_count){
+    if((cmd_count - cmd_cursor_count >= 3) && (buf[cmd_cursor_count] == 0xE4 || buf[cmd_cursor_count] == 0xE5 || buf[cmd_cursor_count] == 0xE6 || buf[cmd_cursor_count] == 0xE7)){ // 如果是中文字符
+      cmd_cursor_count = cmd_cursor_count + 3;
+      eshell_printf("\033[2C");
+    }
+    else{
+      cmd_cursor_count++;
+      eshell_printf("\033[1C");
+    }
+  } 
+}
+
+/* 光标左移一单位 */
+void eshell_moveCursorLeft(char *buf) {
+  if(cmd_cursor_count >= 1){
+    if((cmd_cursor_count >= 3) && (buf[cmd_cursor_count-3] == 0xE4 || buf[cmd_cursor_count-3] == 0xE5 || buf[cmd_cursor_count-3] == 0xE6 || buf[cmd_cursor_count-3] == 0xE7)){ // 如果是中文字符
+      cmd_cursor_count = cmd_cursor_count - 3;
+      eshell_printf("\033[2D");
+    }
+    else{
+    cmd_cursor_count--;
+    eshell_printf("\033[1D");
+    }
+  }
+}
+
+// /* 显示上一个历史命令
+//  */
+// void eshell_previous_command(){
+//   // 清空当前显示内容
+//   eshell_printf("\r");
+//   for(int i=0; i<cmd_count; i++){eshell_printf(" ");}
+//   eshell_printf("\r->");
+
+//   strncpy(eshell_rcv_buffer, eshell_cmd_historical_record[eshell_cmd_historical_record_count - eshell_cmd_historical_record_count_offset], ESHELL_CMD_PARAM_MAX_NUM); // 拷贝历史命令至命令缓冲区
+//   cmd_count = eshell_cmd_historical_record_length[eshell_cmd_historical_record_count - eshell_cmd_historical_record_count_offset];  // 设置命令长度
+//   cmd_cursor_count = cmd_count; // 移动光标
+//   eshell_printf(eshell_rcv_buffer); // 终端显示
+
+//   if(eshell_cmd_historical_record_count - eshell_cmd_historical_record_count_offset > 0){eshell_cmd_historical_record_count_offset++;} // 上偏移量增加
+//   else if( (eshell_cmd_historical_record_count - eshell_cmd_historical_record_count_offset) <= 0 && eshell_cmd_historical_record_count_cumulant > ESHELL_HISTORICAL_RECORD_MAX){  // 循环历史记录显示
+//     eshell_cmd_historical_record_count_offset = -(ESHELL_HISTORICAL_RECORD_MAX - 1 - eshell_cmd_historical_record_count);
+//     }
+// }
+
+
+// /* 显示下一个历史命令
+//  */
+// void eshell_next_command(){
+//   // 清空当前显示内容
+//   eshell_printf("\r");
+//   for(int i=0; i<cmd_count; i++){eshell_printf(" ");}
+//   eshell_printf("\r->");
+
+//   strncpy(eshell_rcv_buffer, eshell_cmd_historical_record[eshell_cmd_historical_record_count - eshell_cmd_historical_record_count_offset], ESHELL_CMD_PARAM_MAX_NUM); // 拷贝历史命令至命令缓冲区
+//   cmd_count = eshell_cmd_historical_record_length[eshell_cmd_historical_record_count - eshell_cmd_historical_record_count_offset];  // 设置命令长度
+//   cmd_cursor_count = cmd_count; // 移动光标
+//   eshell_printf(eshell_rcv_buffer); // 终端显示
+
+//   if(eshell_cmd_historical_record_count - eshell_cmd_historical_record_count_offset < ESHELL_HISTORICAL_RECORD_MAX-1){eshell_cmd_historical_record_count_offset--;} // 上偏移量增加
+//   else if( (eshell_cmd_historical_record_count - eshell_cmd_historical_record_count_offset) >= ESHELL_HISTORICAL_RECORD_MAX-1 && eshell_cmd_historical_record_count_cumulant > ESHELL_HISTORICAL_RECORD_MAX){  // 循环历史记录显示
+//     eshell_cmd_historical_record_count_offset =  - eshell_cmd_historical_record_count;
+//     }
+// }

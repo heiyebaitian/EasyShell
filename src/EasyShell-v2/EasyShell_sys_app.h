@@ -1,5 +1,5 @@
-#ifndef __EASY_SHELL_SYS_FUCTION__H
-#define __EASY_SHELL_SYS_FUCTION__H
+#ifndef __EASY_SHELL_SYS_APP__H
+#define __EASY_SHELL_SYS_APP__H
 #pragma once
 
 #include <Arduino.h>

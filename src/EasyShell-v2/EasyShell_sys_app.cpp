@@ -1,4 +1,4 @@
-#include "EasyShell_sys_fuction.h"
+#include "EasyShell_sys_app.h"
 
 /* 系统命令静态表 
  * 用于维护基础的系统命令
