@@ -11,11 +11,12 @@
 
 #define ESHELL_SERIAL Serial  // 定义EasyShell终端使用的串口
 #define ESHELL_SERIAL_BPS 115200  // 定义EasyShell终端使用的串口波特率
-#define ESHELL_CMD_BUFFER_MAX_LEN 128 // 最大命令缓冲区长度 可根据单片机内存大小调整此值
+#define ESHELL_CMD_BUFFER_MAX_LEN 50 // 最大命令缓冲区长度 可根据单片机内存大小调整此值 请勿将此值设置过小
+#define ESHELL_PRINT_BUFFER_MAX_LEN 256 // 最大输出缓冲区长度 可根据单片机内存大小调整此值 请勿将此值设置过小
 #define ESHELL_CMD_PARAM_MAX_NUM 64 //  最大命令参数数量
 #define ESHELL_DYNAMIC_CMD_COUNT_MAX 200  // EasyShell 动态表管理的最大命令数量 超出此值将无法添加新命令至表中
 
-#define ESHELL_HISTORICAL_RECORD_MAX 50 // 命令历史记录最大记录值
+// #define ESHELL_HISTORICAL_RECORD_MAX 50 // 命令历史记录最大记录值
 
 
 
@@ -71,12 +72,12 @@ extern EASYSHELL_RUN_STATE eshell_run_state; //  当前EasyShell运行状态
 
 
 
-/* 串口打印函数
+/* 终端打印函数
  * @param format 输出字符串
  */
 #define eshell_printf(...) ESHELL_SERIAL.printf(__VA_ARGS__)
 
-/* 串口字符输出函数
+/* 终端字符输出函数
  * @param in_char 输出字符
  */
 #define eshell_putchar(in_char) ESHELL_SERIAL.printf("%c", in_char)
@@ -92,18 +93,37 @@ extern EASYSHELL_RUN_STATE eshell_run_state; //  当前EasyShell运行状态
  */
 #define eshell_serial_read() ESHELL_SERIAL.read()
 
+/* 终端错误打印函数 */
+void eshell_printf_error(const char *str, ...);
+
+/* 终端警告打印函数 */
+void eshell_printf_warning(const char *str, ...);
+
+/* 终端日志打印函数 */
+void eshell_printf_log(const char *str, ...);
+
+/* 系统时间函数(微秒)
+ * @return 系统时间(微秒)
+ */
+uint32_t eshell_systime_us();
+
+/* 系统时间函数(毫秒)
+ * @return 系统时间(毫秒)
+ */
+uint32_t eshell_systime_ms();
+
 /* 合并将静态命令表添加至动态命令表
  * 注意：请勿重复添加您的静态表至动态表，此操作不会校验是否有重复命令
  * @param static_list 需要添加的命令表
  * @param static_size 需要添加的命令表命令数量
  * @return 状态标志
  */
-uint32_t eshell_add_static_cmd_lists(const eshell_cmd_list* static_list, uint32_t static_size);
+uint8_t eshell_add_static_cmd_lists(const eshell_cmd_list* static_list, uint32_t static_size);
 
 /* EasyShell 初始化函数
  * @return 状态标志
  */
-uint32_t eshell_Init(eshell_cmd_list* user_static_cmd_list, uint32_t user_static_cmd_list_num);
-uint32_t eshell_Init();
+uint8_t eshell_Init(eshell_cmd_list* user_static_cmd_list, uint32_t user_static_cmd_list_num);
+uint8_t eshell_Init();
 
 #endif

@@ -8,7 +8,6 @@
 extern eshell_cmd_list eshell_sys_static_cmd_list[];
 extern uint32_t eshell_sys_static_cmd_list_num;
 
-void cmd_test(int argc, char**argv);
 void cmd_help(int argc, char**argv);
 
 #endif

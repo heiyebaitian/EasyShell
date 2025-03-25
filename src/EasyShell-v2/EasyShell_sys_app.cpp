@@ -5,7 +5,6 @@
  */
 eshell_cmd_list eshell_sys_static_cmd_list[] = 
 {
-  {"test", cmd_test, "显示解析的参数信息"},
   {"help", cmd_help, "显示帮助菜单"}
 };
 /* 命令数量计算 */
@@ -13,18 +12,7 @@ uint32_t eshell_sys_static_cmd_list_num = sizeof(eshell_sys_static_cmd_list)/siz
 
 
 
-/* 参数回显测试 */
-void cmd_test(int argc, char**argv)
-{
-  int i = 0;
-  eshell_printf("argc=%d ", argc);
-  eshell_printf("argv=[");
-  for(i=0; i<(argc-1); i++)
-  {
-    eshell_printf("%s,", argv[i]);
-  }
-  eshell_printf("%s]\r\n", argv[i]);
-}
+
 
 
 /* 帮助菜单（全表打印） */
