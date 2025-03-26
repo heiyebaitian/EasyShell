@@ -5,18 +5,11 @@
 #include <Arduino.h> // 引入uint，String等变量类型支持，请根据平台更换为其他库
 #include <stdio.h>
 #include <stdlib.h> // 动态内存分配
+#include "Easyshell_cfg.h"  // 配置文件
 
 
 
 
-#define ESHELL_SERIAL Serial  // 定义EasyShell终端使用的串口
-#define ESHELL_SERIAL_BPS 115200  // 定义EasyShell终端使用的串口波特率
-#define ESHELL_CMD_BUFFER_MAX_LEN 50 // 最大命令缓冲区长度 可根据单片机内存大小调整此值 请勿将此值设置过小
-#define ESHELL_PRINT_BUFFER_MAX_LEN 256 // 最大输出缓冲区长度 可根据单片机内存大小调整此值 请勿将此值设置过小
-#define ESHELL_CMD_PARAM_MAX_NUM 64 //  最大命令参数数量
-#define ESHELL_DYNAMIC_CMD_COUNT_MAX 200  // EasyShell 动态表管理的最大命令数量 超出此值将无法添加新命令至表中
-
-// #define ESHELL_HISTORICAL_RECORD_MAX 50 // 命令历史记录最大记录值
 
 
 
@@ -54,13 +47,19 @@ typedef enum
 
 
 
-/* 命令表结构体 */
+/* 命令表结构体
+ * name 命令名称
+ * func 函数地址
+ * help 命令简介 
+ * hide 隐藏命令不在help中显示
+ */
 typedef void(*eshell_cmd_func_t)(int argc, char**argv);
 typedef struct /* 定义命令结构体 */
 {
   const char *name;
   eshell_cmd_func_t func;
   const char *help;
+  bool hide;
 }eshell_cmd_list;
 
 
@@ -93,6 +92,11 @@ extern EASYSHELL_RUN_STATE eshell_run_state; //  当前EasyShell运行状态
  */
 #define eshell_serial_read() ESHELL_SERIAL.read()
 
+/* 获取一个字符
+ * @return 获取的字符
+ */
+char eshell_getchar();
+
 /* 终端错误打印函数 */
 void eshell_printf_error(const char *str, ...);
 
@@ -119,6 +123,21 @@ uint32_t eshell_systime_ms();
  * @return 状态标志
  */
 uint8_t eshell_add_static_cmd_lists(const eshell_cmd_list* static_list, uint32_t static_size);
+
+/* 命令移除函数
+ * @param cmd_name 需要移除的命令名称
+ * @return 状态标志
+ */
+uint8_t eshell_remove_cmd(const char* cmd_name);
+
+/* 命令添加函数
+ * @param name 命令名称
+ * @param func 函数地址
+ * @param help 命令简介
+ * @param hide 是否隐藏命令不在help中显示
+ * @return 状态标志
+ */
+uint8_t eshell_add_cmd(const char* name, eshell_cmd_func_t func, const char* help, bool hide);
 
 /* EasyShell 初始化函数
  * @return 状态标志

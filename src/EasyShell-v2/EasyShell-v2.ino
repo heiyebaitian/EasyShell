@@ -4,6 +4,7 @@
 void cmd_hello(int argc, char**argv){
   eshell_printf("hello world\r\n");
   eshell_printf_custom(0,31,40,"hello world %d\r\n",2025);
+  eshell_add_cmd("hello2025", cmd_hello, "hello2025", false);
 }
 
 /* 彩色文本输出测试 */
@@ -35,6 +36,11 @@ void cmd_colortext(int argc, char**argv)
 
 /* 进度条测试 */
 void cmd_loading(int argc, char**argv){
+  if (argc == 1 || strcmp(argv[1], "-h") == 0){
+    eshell_printf("loading 进度条示例帮助菜单\r\n");
+    eshell_printf(" -p  选择模式参数 0--正常进度条 1--自终断进度条 2--重复初始化的进度条 3--十个正常进度条\r\n");
+    eshell_printf(" -h  获取帮助信息\r\n");
+  }
   if (strcmp(argv[1], "-p") == 0 && strcmp(argv[2], "0") == 0){
     eshell_LoadingBar(0,0,"下载中");  // 初始化进度条
     for(int i=0;i<=100;i++){
@@ -68,11 +74,6 @@ void cmd_loading(int argc, char**argv){
       }
     }
   }
-  if (strcmp(argv[1], "-h") == 0 || argc == 1){
-    eshell_printf("loading 进度条示例帮助菜单\r\n");
-    eshell_printf(" -p  选择模式参数 0--正常进度条 1--自终断进度条 2--重复初始化的进度条 3--十个正常进度条\r\n");
-    eshell_printf(" -h  获取帮助信息\r\n");
-  }
 }
 
 /* 参数回显测试 */
@@ -104,6 +105,7 @@ uint32_t eshell_user_static_cmd_list_num = sizeof(user_static_cmd_list)/sizeof(e
 
 void setup() {
   // put your setup code here, to run once:
+  delay(2000);
   eshell_Init(user_static_cmd_list, eshell_user_static_cmd_list_num);
 
 }

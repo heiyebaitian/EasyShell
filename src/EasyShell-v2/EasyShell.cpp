@@ -139,6 +139,10 @@ uint8_t eshell_get_cmd(char *buf, uint32_t maxlen){
         eshell_putchar(rcv_char_buffer); 
         eshell_cmd_input_prompt();
       }break;
+
+      case 0x09:{ // Tab键
+      }break;
+
       case 0x08:  // Backspace键 (ASCII值)
       case 0x7F:  // Backspace键  DEL(ASCII值)
       {
@@ -245,6 +249,17 @@ uint8_t eshell_get_cmd(char *buf, uint32_t maxlen){
   return ES_GET_NULL_OR_UMCOMPLETED;
 }
 
+/* 命令全为空格检查
+ * @param msg 串口获取的原字符串
+ * @return 如果不全为空格则返回1，否则返回0
+ */
+uint8_t eshell_check_blank(char* msg){
+  uint32_t length =  strlen(msg);
+  for(uint32_t i=0; i<length;i++){
+    if(msg[i] != 0x20){return 1;}
+  }
+  return 0;
+}
 
 
 /* 命令参数计算及拆分 
@@ -288,7 +303,11 @@ void eshell_match(uint32_t argc, char**argv, uint32_t eshell_cmd_list_num, eshel
       return;
     }
   }
+  #if ESHELL_LANGUAGE_SET == 0
+    eshell_printf("\"%s\" command not found.\r\n",argv[0]);
+  #elif ESHELL_LANGUAGE_SET == 1
     eshell_printf("\"%s\" 不是一个有效的命令。\r\n",argv[0]);
+  #endif
 }
 
 
@@ -298,10 +317,10 @@ void eshell_execute(){
   if(eshell_page_id == ES_PAGE_MAIN && eshell_run_state == ES_RUN_NORMAL){
     uint8_t get_state = eshell_get_cmd(eshell_rcv_buffer, ESHELL_CMD_BUFFER_MAX_LEN);  // 获取命令读取状态
     // 如果命令获取完成则解析命令
-    if(get_state == ES_GET_COMPLETED){
-      eshell_printf("\r\n");
+    if(get_state == ES_GET_COMPLETED){  
       /* 获得到命令 */
-      if(strlen(eshell_rcv_buffer)){/* 判断接受到的指令字符串是否为0 */
+      eshell_printf("\r\n");
+      if(strlen(eshell_rcv_buffer) && eshell_check_blank(eshell_rcv_buffer)){/* 判断接受到的指令字符串是否为0 */
         // strncpy(eshell_cmd_historical_record[eshell_cmd_historical_record_count], eshell_rcv_buffer, ESHELL_CMD_PARAM_MAX_NUM); // 拷贝命令至历史记录数组
         // eshell_cmd_historical_record[eshell_cmd_historical_record_count][ESHELL_CMD_PARAM_MAX_NUM] = '\0'; // 确保字符串以 '\0' 结尾
         // eshell_cmd_historical_record_length[eshell_cmd_historical_record_count] = cmd_count; // 将命令的长度写入历史记录数组
@@ -321,7 +340,11 @@ void eshell_execute(){
     else if(get_state == ES_GET_ERROR_BUFFER_REMOVAL){
       memset(eshell_rcv_buffer, 0, ESHELL_CMD_PARAM_MAX_NUM + 1); // 清空缓冲区
       eshell_printf("\r\n");
-      eshell_printf_error("输入命令超过缓冲区允许的最大长度！");
+      #if ESHELL_LANGUAGE_SET == 0
+        eshell_printf_error("Input command exceeds the maximum length allowed by the buffer!");
+      #elif ESHELL_LANGUAGE_SET == 1
+        eshell_printf_error("输入命令超过缓冲区允许的最大长度！");
+      #endif
       eshell_cmd_input_prompt();
     }
   }
