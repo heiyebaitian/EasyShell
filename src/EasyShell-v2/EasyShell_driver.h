@@ -97,14 +97,17 @@ extern EASYSHELL_RUN_STATE eshell_run_state; //  当前EasyShell运行状态
  */
 char eshell_getchar();
 
-/* 终端错误打印函数 */
+/* 终端错误日志打印函数 */
 void eshell_printf_error(const char *str, ...);
 
-/* 终端警告打印函数 */
+/* 终端警告日志打印函数 */
 void eshell_printf_warning(const char *str, ...);
 
-/* 终端日志打印函数 */
-void eshell_printf_log(const char *str, ...);
+/* 终端信息日志打印函数 */
+void eshell_printf_info(const char *str, ...);
+
+/* 终端调试日志打印函数 */
+void eshell_printf_debug(const char *str, ...);
 
 /* 系统时间函数(微秒)
  * @return 系统时间(微秒)

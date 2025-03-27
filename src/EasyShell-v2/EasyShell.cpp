@@ -11,6 +11,7 @@ uint32_t cmd_cursor_count = 0; // 光标位置计数器
 
 
 
+
 /* 光标处删除字符函数(数组操作)
  * 此函数将自动完成于光标位置删除光标前一位字符并自动前移后方字符
  * 注意:此函数默认传入字符个数不含'\0'，请根据实际情况调整传入length
@@ -261,6 +262,62 @@ uint8_t eshell_check_blank(char* msg){
   return 0;
 }
 
+// 动态规划实现编辑距离算法
+uint32_t eshell_edit_distance(const char* s1, const char* s2) {
+    uint32_t len1 = strlen(s1);
+    uint32_t len2 = strlen(s2);
+
+    // 创建动态规划表
+    uint32_t** dp = (uint32_t**)malloc((len1 + 1) * sizeof(uint32_t*));
+    for (uint32_t i = 0; i <= len1; i++) {
+        dp[i] = (uint32_t*)malloc((len2 + 1) * sizeof(uint32_t));
+    }
+
+    // 初始化边界条件
+    for (uint32_t i = 0; i <= len1; i++) {
+        dp[i][0] = i; // 将 s1 的前 i 个字符变为空字符串需要 i 次删除
+    }
+    for (uint32_t j = 0; j <= len2; j++) {
+        dp[0][j] = j; // 将空字符串变为 s2 的前 j 个字符需要 j 次插入
+    }
+
+    // 填充动态规划表
+    for (uint32_t i = 1; i <= len1; i++) {
+        for (uint32_t j = 1; j <= len2; j++) {
+            if (s1[i - 1] == s2[j - 1]) {
+                // 如果字符相同，不需要额外操作
+                dp[i][j] = dp[i - 1][j - 1];
+            } else {
+                // 否则取插入、删除、替换操作中的最小值加 1
+                dp[i][j] = 1 + eshell_min(dp[i - 1][j],     // 删除
+                                          dp[i][j - 1],     // 插入
+                                          dp[i - 1][j - 1]  // 替换
+                                          );
+            }
+        }
+    }
+
+    // 获取最终结果
+    uint32_t result = dp[len1][len2];
+
+    // 释放动态分配的内存
+    for (uint32_t i = 0; i <= len1; i++) {
+        free(dp[i]);
+    }
+    free(dp);
+
+    return result;
+}
+
+// 辅助函数：求三个数中的最小值
+uint32_t eshell_min(uint32_t a, uint32_t b, uint32_t c) {
+    uint32_t min_val = a;
+    if (b < min_val) min_val = b;
+    if (c < min_val) min_val = c;
+    return min_val;
+}
+
+
 
 /* 命令参数计算及拆分 
  * @param msg 串口获取的原字符串
@@ -271,16 +328,63 @@ uint8_t eshell_check_blank(char* msg){
  */
 uint8_t eshell_get_param(char* msg, const char* delim, char* get[], uint32_t param_max_num)
 {
-  uint32_t i,ret;
-  char *ptr = NULL;
-  ptr = strtok(msg, delim);
-  for(i=0; ptr!=NULL &&i<param_max_num; i++)
-  {
-    get[i] = ptr;
-    ptr = strtok(NULL, delim);
-  }
-  ret = i;
-  return ret;
+    if (msg == NULL || delim == NULL || get == NULL) {
+        #if ESHELL_LANGUAGE_SET == 0
+            eshell_printf_error("eshell_get_param()-Invalid input parameters for command parameter parsing!");
+        #elif ESHELL_LANGUAGE_SET == 1
+            eshell_printf_error("eshell_get_param()-命令参数解析的输入参数无效！");
+        #endif
+        return 0; // 返回错误码
+    }
+
+    if (strlen(msg) == 0) {
+        #if ESHELL_LANGUAGE_SET == 0
+            eshell_printf_warning("eshell_get_param()-Empty input string detected in command parameter parsing.");
+        #elif ESHELL_LANGUAGE_SET == 1
+            eshell_printf_warning("eshell_get_param()-检测到命令参数解析中的空输入字符串。");
+        #endif
+        return 0; // 返回参数数量为 0
+    }
+
+    // 检查输入字符串长度是否超出限制
+    if (strlen(msg) >= ESHELL_CMD_BUFFER_MAX_LEN) {
+        #if ESHELL_LANGUAGE_SET == 0
+            eshell_printf_error("eshell_get_param()-Input command exceeds the maximum allowed length!");
+        #elif ESHELL_LANGUAGE_SET == 1
+            eshell_printf_error("eshell_get_param()-输入命令超过缓冲区允许的最大长度！");
+        #endif
+        return 0; // 返回错误码
+    }
+
+    // 检查参数数量限制
+    if (param_max_num == 0 || param_max_num > ESHELL_CMD_PARAM_MAX_NUM) {
+        #if ESHELL_LANGUAGE_SET == 0
+            eshell_printf_error("eshell_get_param()-The number of arguments exceeds the allowed maximum limit or the error is set to 0!");
+        #elif ESHELL_LANGUAGE_SET == 1
+            eshell_printf_error("eshell_get_param()-参数数量超过允许的最大限制或错误设置为0！");
+        #endif
+        return 0; // 返回错误码
+    }
+
+    uint32_t i;
+    char *ptr = NULL;
+    char *saveptr = NULL; // 用于保存 strtok_r 的上下文
+
+    ptr = strtok_r(msg, delim, &saveptr);
+    for (i = 0; ptr != NULL && i < param_max_num; i++) {
+        get[i] = ptr;
+        ptr = strtok_r(NULL, delim, &saveptr);
+    }
+
+    if (ptr != NULL) {
+        #if ESHELL_LANGUAGE_SET == 0
+            eshell_printf_warning("eshell_get_param()-Input string has more parameters than the maximum allowed (%d).", param_max_num);
+        #elif ESHELL_LANGUAGE_SET == 1
+            eshell_printf_warning("eshell_get_param()-输入字符串的参数数量超过了允许的最大值 (%d)。", param_max_num);
+        #endif
+    }
+
+    return i; // 返回实际参数数量
 }
 
 
@@ -289,25 +393,102 @@ uint8_t eshell_get_param(char* msg, const char* delim, char* get[], uint32_t par
  * @param argc 参数数量
  * @param argv 参数
  */
-void eshell_match(uint32_t argc, char**argv, uint32_t eshell_cmd_list_num, eshell_cmd_list cmd_list[])
-{
-  uint32_t i = 0;
-  for(i=0; i<eshell_cmd_list_num; i++)
-  {
-    // 命令匹配
-    if(strcmp(argv[0], cmd_list[i].name) == 0)
-    {
-      eshell_page_id = ES_PAGE_APP; // 将页面ID设置为应用程序
-      cmd_list[i].func(argc, argv); // 跳转到对应的回调函数
-      eshell_page_id = ES_PAGE_MAIN;  // 退出应用程序恢复为主界面
-      return;
+void eshell_match(uint32_t argc, char** argv, uint32_t eshell_cmd_list_num, eshell_cmd_list cmd_list[]){
+    const char* similar_cmd = NULL;
+    uint32_t edit_distance = 0xFFFFFFFF;
+    uint32_t temp_edit_distance = 0;
+    // 检查输入参数有效性
+    if (cmd_list == NULL || argv == NULL) {
+        #if ESHELL_LANGUAGE_SET == 0
+            eshell_printf_error("eshell_match()-Invalid input parameters for command matching!");
+        #elif ESHELL_LANGUAGE_SET == 1
+            eshell_printf_error("eshell_match()-命令匹配的输入参数无效！");
+        #endif
+        return;
     }
-  }
-  #if ESHELL_LANGUAGE_SET == 0
-    eshell_printf("\"%s\" command not found.\r\n",argv[0]);
-  #elif ESHELL_LANGUAGE_SET == 1
-    eshell_printf("\"%s\" 不是一个有效的命令。\r\n",argv[0]);
-  #endif
+
+    if (eshell_cmd_list_num > ESHELL_DYNAMIC_CMD_COUNT_MAX) {
+        #if ESHELL_LANGUAGE_SET == 0
+            eshell_printf_error("eshell_match()-Command list size exceeds the maximum allowed limit!");
+        #elif ESHELL_LANGUAGE_SET == 1
+            eshell_printf_error("eshell_match()-命令列表大小超过允许的最大限制！");
+        #endif
+        return;
+    }
+
+    if (argc > ESHELL_CMD_PARAM_MAX_NUM) {
+        #if ESHELL_LANGUAGE_SET == 0
+            eshell_printf_error("eshell_match()-Parameter count exceeds the maximum allowed limit!");
+        #elif ESHELL_LANGUAGE_SET == 1
+            eshell_printf_error("eshell_match()-参数数量超过允许的最大限制！");
+        #endif
+        return;
+    }
+
+    if (argv[0] == NULL) {
+        #if ESHELL_LANGUAGE_SET == 0
+            eshell_printf_error("eshell_match()-Invalid input command! Command name is NULL.");
+        #elif ESHELL_LANGUAGE_SET == 1
+            eshell_printf_error("eshell_match()-无效的输入命令！命令名称为空。");
+        #endif
+        return;
+    }
+    
+    // 遍历命令表进行匹配
+    for (uint32_t i = 0; i < eshell_cmd_list_num; i++) {
+        if (cmd_list[i].name == NULL) {
+            #if ESHELL_LANGUAGE_SET == 0
+                eshell_printf_warning("eshell_match()-Command name at index %d is NULL, skipping...", i);
+            #elif ESHELL_LANGUAGE_SET == 1
+                eshell_printf_warning("eshell_match()-索引 %d 处的命令名称为空，跳过...", i);
+            #endif
+            continue;
+        }
+
+        if (strcmp(argv[0], cmd_list[i].name) == 0) {
+            if (cmd_list[i].func == NULL) {
+                #if ESHELL_LANGUAGE_SET == 0
+                    eshell_printf_warning("eshell_match()-Callback function for command '%s' is NULL, skipping...", cmd_list[i].name);
+                #elif ESHELL_LANGUAGE_SET == 1
+                    eshell_printf_warning("eshell_match()-命令 '%s' 的回调函数为空，跳过...", cmd_list[i].name);
+                #endif
+                continue;
+            }
+
+            eshell_page_id = ES_PAGE_APP; // 将页面ID设置为应用程序
+            cmd_list[i].func(argc, argv); // 调用对应的回调函数
+            eshell_page_id = ES_PAGE_MAIN; // 退出应用程序恢复为主界面
+            return;
+        }
+        else{
+          // 相似命令匹配
+          uint32_t max_allowed_distance = (strlen(argv[0]) + strlen(cmd_list[i].name)) / ESHELL_CMD_EDIT_DISTANCE_MATCHING_DIVISOR; // 动态阈值：允许的最大编辑距离
+          temp_edit_distance = eshell_edit_distance(argv[0], cmd_list[i].name); // 计算编辑距离
+          // 如果编辑距离更优 且 小于动态阈值 则 记录该命令为更优相似命令
+          if(temp_edit_distance <= edit_distance && temp_edit_distance <= max_allowed_distance){
+            edit_distance = temp_edit_distance;
+            similar_cmd = cmd_list[i].name;
+          }
+        }
+    }
+
+
+    // 如果存在相似命令
+    if(edit_distance > 0 && similar_cmd != NULL){
+      #if ESHELL_LANGUAGE_SET == 0
+        eshell_printf("'%s' command not found,did you mean: '%s'\r\n", argv[0], similar_cmd);
+      #elif ESHELL_LANGUAGE_SET == 1
+        eshell_printf("'%s' 命令没有找到，您是否想要输入 '%s'\r\n", argv[0], similar_cmd);
+      #endif
+    }
+    else{
+      // 未找到匹配命令
+      #if ESHELL_LANGUAGE_SET == 0
+        eshell_printf("'%s' command not found.\r\n", argv[0]);
+      #elif ESHELL_LANGUAGE_SET == 1
+        eshell_printf("'%s' 命令没有找到。\r\n", argv[0]);
+      #endif
+    }
 }
 
 

@@ -42,44 +42,8 @@ char eshell_getchar(){
   }
 }
 
-/* 终端错误打印函数 */
+/* 终端错误日志打印函数 */
 void eshell_printf_error(const char *str, ...){
-  char buffer[ESHELL_PRINT_BUFFER_MAX_LEN];
-  va_list args;
-  va_start(args, str);
-
-  // 格式化字符串到缓冲区
-  vsnprintf(buffer, sizeof(buffer), str, args);
-  eshell_printf("%lf ",eshell_systime_us()/1000000.0);
-  eshell_printf("[EasyShell]Error:");
-  // 输出缓冲区内容
-  eshell_printf_custom(1,31,40,"%s \r\n", buffer);
-  //eshell_printf("%s \r\n", buffer);
-  va_end(args);
-}
-
-
-
-/* 终端警告打印函数 */
-void eshell_printf_warning(const char *str, ...){
-  char buffer[ESHELL_PRINT_BUFFER_MAX_LEN];
-  va_list args;
-  va_start(args, str);
-
-  // 格式化字符串到缓冲区
-  vsnprintf(buffer, sizeof(buffer), str, args);
-  eshell_printf("%lf ",eshell_systime_us()/1000000.0);
-  eshell_printf("[EasyShell]Warning:");
-  // 输出缓冲区内容
-  eshell_printf_custom(1,33,40,"%s \r\n", buffer);
-  //eshell_printf("%s \r\n", buffer);
-  va_end(args);
-}
-
-
-
-/* 终端日志打印函数 */
-void eshell_printf_log(const char *str, ...){
   char buffer[ESHELL_PRINT_BUFFER_MAX_LEN];
   va_list args;
   va_start(args, str);
@@ -89,10 +53,59 @@ void eshell_printf_log(const char *str, ...){
   eshell_printf("%lf ",eshell_systime_us()/1000000.0);
   eshell_printf("[EasyShell]");
   // 输出缓冲区内容
-  eshell_printf("%s \r\r", buffer);
+  eshell_printf_custom(1,31,40,"Error:%s \r\n", buffer);
   va_end(args);
 }
 
+
+
+/* 终端警告日志打印函数 */
+void eshell_printf_warning(const char *str, ...){
+  char buffer[ESHELL_PRINT_BUFFER_MAX_LEN];
+  va_list args;
+  va_start(args, str);
+
+  // 格式化字符串到缓冲区
+  vsnprintf(buffer, sizeof(buffer), str, args);
+  eshell_printf("%lf ",eshell_systime_us()/1000000.0);
+  eshell_printf("[EasyShell]");
+  // 输出缓冲区内容
+  eshell_printf_custom(1,33,40,"Warning:%s \r\n", buffer);
+  va_end(args);
+}
+
+
+
+/* 终端信息日志打印函数 */
+void eshell_printf_info(const char *str, ...){
+  char buffer[ESHELL_PRINT_BUFFER_MAX_LEN];
+  va_list args;
+  va_start(args, str);
+
+  // 格式化字符串到缓冲区
+  vsnprintf(buffer, sizeof(buffer), str, args);
+  eshell_printf("%lf ",eshell_systime_us()/1000000.0);
+  // 输出缓冲区内容
+  eshell_printf("[EasyShell]");
+  eshell_printf_custom(1,34,40,"%s \r\n", buffer);
+  va_end(args);
+}
+
+
+/* 终端调试日志打印函数 */
+void eshell_printf_debug(const char *str, ...){
+  char buffer[ESHELL_PRINT_BUFFER_MAX_LEN];
+  va_list args;
+  va_start(args, str);
+
+  // 格式化字符串到缓冲区
+  vsnprintf(buffer, sizeof(buffer), str, args);
+  eshell_printf("%lf ",eshell_systime_us()/1000000.0);
+  // 输出缓冲区内容
+  eshell_printf("[EasyShell]");
+  eshell_printf_custom(1,32,40,"%s \r\n", buffer);
+  va_end(args);
+}
 
 /* 系统时间函数(微秒)
  * @return 系统时间(微秒)

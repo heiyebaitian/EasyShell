@@ -42,35 +42,35 @@ void cmd_loading(int argc, char**argv){
     eshell_printf(" -h  获取帮助信息\r\n");
   }
   if (strcmp(argv[1], "-p") == 0 && strcmp(argv[2], "0") == 0){
-    eshell_LoadingBar(0,0,"下载中");  // 初始化进度条
+    eshell_LoadingBar(0,0,"加载中");  // 初始化进度条
     for(int i=0;i<=100;i++){
      delay(10);
-     eshell_LoadingBar(1,i,"下载中");
+     eshell_LoadingBar(1,i,"加载中");
     }
   }
   if (strcmp(argv[1], "-p") == 0 && strcmp(argv[2], "1") == 0){
-    eshell_LoadingBar(0,0,"下载中");
+    eshell_LoadingBar(0,0,"加载中");
     for(int i=0;i<=80;i++){
      delay(10);
-     eshell_LoadingBar(1,i,"下载中");
+     eshell_LoadingBar(1,i,"加载中");
     }
     eshell_LoadingBar(2,81,"因为异常触发测试！"); // 强制中断进度条
   }
   if (strcmp(argv[1], "-p") == 0 && strcmp(argv[2], "2") == 0){
-    eshell_LoadingBar(0,0,"下载中");
+    eshell_LoadingBar(0,0,"加载中");
     for(int i=0;i<=80;i++){
      delay(10);
-     eshell_LoadingBar(1,i,"下载中");
+     eshell_LoadingBar(1,i,"加载中");
     }
-    eshell_LoadingBar(0,81,"下载中");
+    eshell_LoadingBar(0,81,"加载中");
   }
   if (strcmp(argv[1], "-p") == 0 && strcmp(argv[2], "3") == 0){
     for(int j=1;j<=10;j++)
     {
-      eshell_LoadingBar(0,0,"下载中");
+      eshell_LoadingBar(0,0,"加载中");
       for(int i=0;i<=100;i++){
         delay(10);
-        eshell_LoadingBar(1,i,"下载中");
+        eshell_LoadingBar(1,i,"加载中");
       }
     }
   }

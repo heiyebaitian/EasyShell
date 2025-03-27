@@ -11,6 +11,8 @@
 bool eshell_read_next_char(char &buffer);
 uint8_t eshell_get_cmd(char *buf, uint32_t maxlen);
 uint8_t eshell_check_blank(char* msg);
+uint32_t eshell_edit_distance(const char* s1, const char* s2);
+uint32_t eshell_min(uint32_t a, uint32_t b, uint32_t c);
 uint8_t eshell_get_param(char* msg, const char* delim, char* get[], uint32_t param_max_num);
 uint8_t eshell_delete_char_at_cursor(char *str, uint32_t length, uint32_t cursor);
 void eshell_match(uint32_t argc, char**argv, uint32_t eshell_cmd_list_num, eshell_cmd_list cmd_list[]);

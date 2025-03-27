@@ -44,13 +44,19 @@ void cmd_eshell(int argc, char**argv){
       if(argc > i+1){
         char getchar_buffer = 0;
         #if ESHELL_LANGUAGE_SET == 0
-          eshell_printf("eshell:Are you sure you want to delete the command '%s'? [y/n]:");
+          eshell_printf("eshell:Are you sure you want to delete the command '%s'? [y/n]:",argv[i+1]);
         #elif ESHELL_LANGUAGE_SET == 1
           eshell_printf("eshell:你确定要删除命令 '%s' 吗[y/n]:",argv[i+1]);
         #endif
         getchar_buffer = eshell_getchar();
         if(getchar_buffer == 0x79 || getchar_buffer == 0x59){
-          eshell_remove_cmd(argv[i+1]);
+          if(eshell_remove_cmd(argv[i+1]) == 0){
+            #if ESHELL_LANGUAGE_SET == 0
+              eshell_printf("eshell:The command '%s' has been successfully removed from the dynamic command list.\r\n",argv[i+1]);
+            #elif ESHELL_LANGUAGE_SET == 1
+              eshell_printf("eshell:命令 '%s' 已成功从动态命令列表中删除。\r\n",argv[i+1]);
+            #endif
+          }
         }
         i++;
       }
