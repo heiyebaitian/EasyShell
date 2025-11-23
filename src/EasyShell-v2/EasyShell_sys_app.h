@@ -4,6 +4,7 @@
 
 #include <Arduino.h>
 #include "EasyShell_driver.h"
+#include "Easyshell_cfg.h"  // 配置文件
 
 extern eshell_cmd_list eshell_sys_static_cmd_list[];
 extern uint32_t eshell_sys_static_cmd_list_num;
