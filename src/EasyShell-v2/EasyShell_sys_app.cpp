@@ -69,7 +69,7 @@ void cmd_eshell(int argc, char**argv){
       }
     }
     
-    if(strcmp(argv[i], "-v") == 0 || strcmp(argv[1], "--version") == 0){
+    else if(strcmp(argv[i], "-v") == 0 || strcmp(argv[1], "--version") == 0){
       eshell_printf("\r\n-----Version-----\r\n");
       eshell_printf("EasyShell %s (%s)\r\n", ESHELL_VERSION, __DATE__);
       eshell_printf("作者:参宿四\r\n");
